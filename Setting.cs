@@ -172,6 +172,7 @@ namespace VehicleCapUnlock
                 { "VehicleCapUnlock.STATUS.Applied", "Settings applied (removal not prepared)" },
                 { "VehicleCapUnlock.STATUS.Prepared", "Prepared: save a copy before removal" },
                 { "VehicleCapUnlock.STATUS.Conflict", "Conflict: completion blocked; see mod log" },
+                { "VehicleCapUnlock.STATUS.Skipped", "Nothing eligible: no depot was resized; see mod log" },
                 { "VehicleCapUnlock.STATUS.Failed", "Failed: do not save; see mod log" },
             };
         }
@@ -219,6 +220,7 @@ namespace VehicleCapUnlock
                 { "VehicleCapUnlock.STATUS.Applied", "已按设置处理（未准备卸载）" },
                 { "VehicleCapUnlock.STATUS.Prepared", "已准备，请另存副本后卸载" },
                 { "VehicleCapUnlock.STATUS.Conflict", "存在冲突，未完成，请查看 mod 日志" },
+                { "VehicleCapUnlock.STATUS.Skipped", "没有合格车库，未做任何改动，请查看 mod 日志" },
                 { "VehicleCapUnlock.STATUS.Failed", "处理失败，请勿保存，查看 mod 日志" },
             };
         }

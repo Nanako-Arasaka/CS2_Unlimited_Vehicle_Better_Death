@@ -35,6 +35,8 @@
 	<ItemGroup>
 		<Compile Remove="tests\**\*.cs" />
 		<Compile Remove=".tools\**\*.cs" />
+		<!-- 同仓库的独立模组，各自有 csproj，不能被父项目一起编译 -->
+		<Compile Remove="DeathcareTune\**\*.cs" />
 	</ItemGroup>
 
 	<ItemGroup>

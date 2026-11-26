@@ -129,22 +129,24 @@ internal static class Program
         graph.Connect("passenger", "lamp"); graph.Connect("cargo", "lamp");
         graph.Connect("passenger", "passengerDepot"); graph.Connect("cargo", "cargoDepot");
         var result = graph.Resolve();
-        Assert(DepotSafety.IsPassengerOnly(result["passengerDepot"]), "Shared decoration tainted passenger terminal");
-        Assert(!DepotSafety.IsPassengerOnly(result["cargoDepot"]), "Cargo depot accepted");
+        Assert(DepotSafety.IsPassengerEligible(result["passengerDepot"]), "Shared decoration tainted passenger terminal");
+        Assert(!DepotSafety.IsPassengerEligible(result["cargoDepot"]), "Cargo depot accepted");
         graph.Add("middle", DepotPurpose.None, false); graph.Add("nested", DepotPurpose.None, true);
         graph.Connect("passenger", "middle"); graph.Connect("middle", "nested");
-        Assert(DepotSafety.IsPassengerOnly(graph.Resolve()["nested"]), "Nested passenger depot not resolved");
+        Assert(DepotSafety.IsPassengerEligible(graph.Resolve()["nested"]), "Nested passenger depot not resolved");
         graph.Connect("cargo", "nested");
-        Assert(!DepotSafety.IsPassengerOnly(graph.Resolve()["passengerDepot"]), "Mixed terminal family accepted");
+        Assert(!DepotSafety.IsPassengerEligible(graph.Resolve()["passengerDepot"]), "Mixed terminal family accepted");
 
         var upgrades = new DepotPurposeGraph<int>();
         upgrades.Add(1, DepotPurpose.Passenger, true); upgrades.Add(2, DepotPurpose.None, true);
         upgrades.Connect(1, 2); upgrades.Connect(2, 1);
-        Assert(DepotSafety.IsPassengerOnly(upgrades.Resolve()[2]), "Cyclic upgrade graph did not converge");
+        Assert(DepotSafety.IsPassengerEligible(upgrades.Resolve()[2]), "Cyclic upgrade graph did not converge");
         upgrades.Add(2, DepotPurpose.RepeatableUpgrade, true);
-        Assert(!DepotSafety.IsPassengerOnly(upgrades.Resolve()[1]), "Repeatable capacity family accepted");
-        Assert(!DepotSafety.IsPassengerOnly(DepotPurpose.None), "Unknown standalone depot accepted");
-        Assert(!DepotSafety.IsPassengerOnly(DepotPurpose.Passenger | DepotPurpose.Unknown), "Partially unknown family accepted");
+        Assert(DepotSafety.IsPassengerEligible(upgrades.Resolve()[1]), "Repeatable capacity must not veto a passenger depot");
+        Assert(!DepotSafety.IsPassengerEligible(DepotPurpose.None), "Unknown standalone depot accepted");
+        Assert(DepotSafety.IsPassengerEligible(DepotPurpose.Passenger | DepotPurpose.Unknown), "Unproven provenance must not veto a passenger depot");
+        Assert(!DepotSafety.IsPassengerEligible(DepotPurpose.Passenger | DepotPurpose.Cargo), "Shared cargo/passenger terminal accepted");
+        Assert(!DepotSafety.IsPassengerEligible(DepotPurpose.Cargo), "Cargo-only terminal accepted");
     }
 
     private static WriteBatchException ExpectBatchFailure(List<IReversibleWrite> writes)

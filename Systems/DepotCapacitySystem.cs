@@ -118,14 +118,22 @@ namespace VehicleCapUnlock.Systems
             var writes = new List<IReversibleWrite>();
             var commits = new List<Action>();
             var capacities = new List<int>();
-            int skipped = 0, conflicts = 0;
+            var samples = new List<string>(6);
+            int skipped = 0, conflicts = 0, eligibleCount = 0, candidates = 0;
+            int unresolved = 0, wrongType = 0, wrongRole = 0, nonPositive = 0;
             using (var entities = m_DepotQuery.ToEntityArray(Allocator.Temp))
             {
+                candidates = entities.Length;
                 foreach (Entity entity in entities)
                 {
                     var current = EntityManager.GetComponentData<TransportDepotData>(entity);
                     if (!m_PrefabSystem.TryGetPrefab<PrefabBase>(entity, out var prefab) || prefab == null)
-                    { capacities.Add(current.m_VehicleCapacity); skipped++; continue; }
+                    {
+                        capacities.Add(current.m_VehicleCapacity);
+                        skipped++;
+                        unresolved++;
+                        continue;
+                    }
                     bool known = m_Originals.TryGetValue(entity, out var snapshot) && ReferenceEquals(snapshot.Prefab, prefab);
                     if (known && !snapshot.Value.Accepts(current))
                     {
@@ -135,11 +143,24 @@ namespace VehicleCapUnlock.Systems
                         continue;
                     }
                     purposes.TryGetValue(entity, out var purpose);
-                    bool eligible = IsSupportedType(current.m_TransportType) && DepotSafety.IsPassengerOnly(purpose);
+                    bool typeOk = IsSupportedType(current.m_TransportType);
+                    bool roleOk = DepotSafety.IsPassengerEligible(purpose);
+                    bool scaleOk = DepotSafety.TryScale(current.m_VehicleCapacity, multiplier, out _);
+                    bool eligible = typeOk && roleOk && scaleOk;
+                    if (!known && !eligible)
+                    {
+                        capacities.Add(current.m_VehicleCapacity);
+                        skipped++;
+                        if (!typeOk) wrongType++;
+                        else if (!roleOk) wrongRole++;
+                        else nonPositive++;
+                        if (samples.Count < 6)
+                            samples.Add($"{prefab.name}/{current.m_TransportType}/{(int)purpose}/cap={current.m_VehicleCapacity}");
+                        continue;
+                    }
+                    if (eligible) eligibleCount++;
                     if (!known)
                     {
-                        if (!eligible || !DepotSafety.TryScale(current.m_VehicleCapacity, multiplier, out _))
-                        { capacities.Add(current.m_VehicleCapacity); skipped++; continue; }
                         snapshot = new Snapshot { Prefab = prefab, Value = new OwnedValue<TransportDepotData>(current) };
                         m_Originals[entity] = snapshot;
                     }
@@ -151,6 +172,8 @@ namespace VehicleCapUnlock.Systems
                         // A now-ambiguous family is not enlarged; restore only our own last write.
                         target.m_VehicleCapacity = snapshot.Value.Original.m_VehicleCapacity;
                         skipped++;
+                        if (samples.Count < 6)
+                            samples.Add($"{prefab.name}/{current.m_TransportType}/{(int)purpose}/cap={current.m_VehicleCapacity}");
                     }
                     capacities.Add(target.m_VehicleCapacity);
                     AddWrite(writes, commits, entity, snapshot, current, target);
@@ -164,8 +187,12 @@ namespace VehicleCapUnlock.Systems
             }
             SafeWriteBatch.Execute(writes);
             foreach (var commit in commits) commit();
-            m_Status = conflicts > 0 ? "Conflict" : "Applied";
-            Mod.s_Log.Info($"[车库完成] multiplier={multiplier}; changes={writes.Count}; skipped={skipped}; conflicts={conflicts}");
+            m_Status = conflicts > 0 ? "Conflict" : (eligibleCount > 0 ? "Applied" : "Skipped");
+            Mod.s_Log.Info($"[车库完成] multiplier={multiplier}; candidates={candidates}; eligible={eligibleCount}; " +
+                $"changes={writes.Count}; skipped={skipped}; conflicts={conflicts}");
+            if (skipped > 0)
+                Mod.s_Log.Info($"[车库筛选] 无法解析={unresolved}; 类型不支持={wrongType}; 含货运或无客运={wrongRole}; " +
+                    $"容量非正={nonPositive}; 样例(名称/类型/purpose/cap)={string.Join(" | ", samples)}");
             return true;
         }
 

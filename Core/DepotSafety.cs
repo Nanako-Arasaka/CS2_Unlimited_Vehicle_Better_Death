@@ -8,7 +8,12 @@ namespace VehicleCapUnlock.Core
 
     internal static class DepotSafety
     {
-        public static bool IsPassengerOnly(DepotPurpose purpose) => purpose == DepotPurpose.Passenger;
+        // A facility qualifies when at least one passenger role reaches it and no cargo role does.
+        // Unproven provenance (Unknown) and repeatable capacity upgrades deliberately no longer
+        // veto the write: neither says anything about whether a subway/bus depot is passenger-only,
+        // and requiring an exact Passenger flag excluded every vanilla depot from scaling.
+        public static bool IsPassengerEligible(DepotPurpose purpose) =>
+            (purpose & DepotPurpose.Passenger) != 0 && (purpose & DepotPurpose.Cargo) == 0;
 
         public static bool TryScale(int original, int multiplier, out int target)
         {
