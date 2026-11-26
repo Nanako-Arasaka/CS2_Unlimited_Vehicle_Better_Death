@@ -116,6 +116,21 @@ long 中间值避免本 mod 的乘法溢出，但 `int.MaxValue` 只是类型上
 
 整改：依据实际 prefab 用途和组件明确筛选，覆盖升级组件；文档中的功能范围必须与实际处理集合一致。
 
+**整改结果（2026-11-26，推翻上面「仅客运」的严格实现）**
+
+第一版按字面把「仅客运」实现成 `purpose == DepotPurpose.Passenger` 的严格相等。实际游戏中 34 个候选 prefab **全部被跳过**，地铁与公交车库都没有扩容，而设置面板仍显示「已应用」——这是一次静默失效，比筛选偏宽更难发现。
+
+改为「**至少一条客运线路或客运站组件到达，且没有任何货运用途到达**」（`(purpose & Passenger) != 0 && (purpose & Cargo) == 0`）后实测：
+
+```
+[车库完成] multiplier=10; candidates=34; eligible=6; changes=6; skipped=28; conflicts=0
+[车库筛选] 无法解析=0; 类型不支持=24; 含货运或无客运=4; 容量非正=0
+```
+
+- `Unknown`（用途未证）与 `RepeatableUpgrade`（可重复容量升级）不再一票否决：两者都不能证明设施属于客货共用。
+- 类型白名单仍是第一道闸，24 个 `Outside Connection` / `Taxi` / 货运场站照旧跳过。
+- 仍在跳过范围：与货运共用 `TransportType` 的火车场站（实测 `RailYard02`，`Train` 同时被货运线路使用且不是 `TransportStation` prefab，拿不到 `Passenger` 位）。若要覆盖，需要为铁路单独设判据，不能放宽为「按类型放行」。
+
 ## 默认行为
 
 [Setting.cs](../Setting.cs) 第 14–17、74–79 行默认开启两项功能、倍率均为 5。
