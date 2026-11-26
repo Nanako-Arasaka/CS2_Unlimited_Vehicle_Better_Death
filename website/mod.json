@@ -9,10 +9,10 @@
   "updated": "2026-11-17",
   "distribution": {
     "paradoxMods": null,
-    "github": "https://github.com/Nanako-Arasaka/CS2_Unlimited_PubilcVehicle",
-    "readme": "https://github.com/Nanako-Arasaka/CS2_Unlimited_PubilcVehicle/blob/main/README.md#%E6%9E%84%E5%BB%BA",
-    "validation": "https://github.com/Nanako-Arasaka/CS2_Unlimited_PubilcVehicle/blob/main/docs/VALIDATION.md",
-    "safety": "https://github.com/Nanako-Arasaka/CS2_Unlimited_PubilcVehicle/blob/main/docs/SAFETY_FIXES.md"
+    "github": "https://github.com/Nanako-Arasaka/CS2_Unlimited_Vehicle_Better_Death",
+    "readme": "https://github.com/Nanako-Arasaka/CS2_Unlimited_Vehicle_Better_Death/blob/main/README.md#%E6%9E%84%E5%BB%BA",
+    "validation": "https://github.com/Nanako-Arasaka/CS2_Unlimited_Vehicle_Better_Death/blob/main/docs/VALIDATION.md",
+    "safety": "https://github.com/Nanako-Arasaka/CS2_Unlimited_Vehicle_Better_Death/blob/main/docs/SAFETY_FIXES.md"
   },
   "gameVersion": null,
   "type": "Code Mod",

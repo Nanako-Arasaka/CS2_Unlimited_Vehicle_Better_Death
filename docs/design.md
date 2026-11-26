@@ -596,7 +596,7 @@ transition: color .3s, background-color .3s, border-color .3s;
   "updated": "<YYYY-MM-DD>",
   "distribution": {
     "paradoxMods": null,
-    "github": "https://github.com/Nanako-Arasaka/CS2_Unlimited_PubilcVehicle"
+    "github": "https://github.com/Nanako-Arasaka/CS2_Unlimited_Vehicle_Better_Death"
   },
   "supports": ["bus", "tram", "subway", "train", "ship", "ferry", "airplane"],
   "garageExcludes": ["taxi"],

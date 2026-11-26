@@ -1,4 +1,79 @@
-# VehicleCapUnlock — 公共交通配车上限解锁
+# CS2_Unlimited_Vehicle_Better_Death
+
+两个**互相独立**的《都市：天际线 II》模组，共用这一个仓库。
+
+| 模组 | 目录 | 做什么 | 状态 |
+|---|---|---|---|
+| **VehicleCapUnlock** | 仓库根（`./`） | 提高公共交通线路面板「配车数量」滑块上限，可选放大车库容量 | 安全审计 F1–F6 已整改，**未完成游戏内存档验收** |
+| **DeathcareTune** | [`DeathcareTune/`](DeathcareTune/) | 殡葬调优：火化速度、灵车数量、尸体存放容量 | 已构建 + 换算回归通过，**未做游戏内验收** |
+
+两者不共享任何代码、不依赖彼此，各自编译出独立 DLL，可以单独安装、单独启用、单独卸载。
+同时启用不会冲突：它们改的是完全不同的数据（前者是线路 policy 与车库容量，后者是 `DeathcareFacilityData` prefab）。
+
+---
+
+## 仓库结构
+
+```text
+CS2_Unlimited_Vehicle_Better_Death/     ← 本机路径 Mods\VehicleCapUnlock
+├─ VehicleCapUnlock.csproj              ← 模组 1（仓库根）
+├─ Mod.cs  Setting.cs
+├─ Core/  Systems/  tests/  scripts/
+├─ docs/  website/
+├─ DeathcareTune/                       ← 模组 2
+│  ├─ DeathcareTune.csproj
+│  ├─ Mod.cs  Setting.cs
+│  ├─ Core/  Systems/  tests/  scripts/
+│  └─ README.md
+├─ .gitignore  .gitattributes  global.json
+└─ .tools/                              ← 便携 SDK 与 NuGet 缓存，不入 Git
+```
+
+`VehicleCapUnlock.csproj` 已显式 `<Compile Remove="DeathcareTune\**\*.cs" />`，避免父项目的默认 glob
+把子模组源码一起编进同一个 DLL。改动 csproj 后用元数据扫描确认父 DLL 内不含 `DeathcareTune` 类型。
+
+## 构建
+
+两个模组都是 net48 + C# 9，共用仓库根的便携 SDK，互不影响。
+
+```powershell
+# 模组 1：仓库根执行
+.\scripts\build.ps1                 # 仅构建
+.\scripts\build.ps1 -Test           # 构建 + 数学/安全回归
+.\scripts\build.ps1 -Deploy         # 正常退出游戏后部署
+
+# 模组 2：进入子目录执行
+cd DeathcareTune
+.\scripts\build.ps1 -Configuration Release -Test -Deploy
+```
+
+- 便携 SDK 8.0.428 位于 `.tools/dotnet`，不修改系统 PATH。
+- 两个构建脚本都会在 Cities2 进程存在时拒绝 `-Deploy`，默认只构建不部署。
+- `DeathcareTune` 的 dotnet 解析顺序：`$env:CSII_DOTNET` → 本工程 `.tools\dotnet` → 仓库根 `.tools\dotnet` → 系统 dotnet。
+- 游戏引用路径默认 `Cities2_Data/Managed`，其他安装位置用 `-ManagedPath` 指定。
+
+## 部署目标
+
+源码在仓库里，游戏实际加载的是用户数据目录下两个独立文件夹：
+
+```text
+%USERPROFILE%\AppData\LocalLow\Colossal Order\Cities Skylines II\Mods\VehicleCapUnlock\
+%USERPROFILE%\AppData\LocalLow\Colossal Order\Cities Skylines II\Mods\DeathcareTune\
+```
+
+游戏 DLL、SDK、NuGet 缓存、编译产物均不纳入 Git。
+
+## 获取
+
+```text
+https://github.com/Nanako-Arasaka/CS2_Unlimited_Vehicle_Better_Death.git
+```
+
+> 本仓库原名 `CS2_Unlimited_PubilcVehicle`（`Public` 拼写错误），改名后旧链接由 GitHub 自动重定向。
+
+---
+
+# 模组 1：VehicleCapUnlock
 
 为《都市天际线 II》提高原版线路面板「配车数量 / Assigned Vehicles」滑块的上限。
 每条线路仍然独立调节；全局选项只决定可调上限，不会把所有线路的当前配车数一起乘倍数。
@@ -13,62 +88,17 @@
 - 目标覆盖公交、有轨电车、地铁、火车、船、轮渡、飞机。共享 policy 路径和车库白名单已实现，7 类交通的运行效果仍需逐项实测。
 - 不使用 Harmony，不替换原版策略系统，不在每帧持续写线路数据。
 
-## 目录和仓库
+## 目录
 
-本机工程目录：
+本机工程目录（也是仓库根）：
 
 ```text
 E:\SteamLibrary\steamapps\common\Cities Skylines II\Mods\VehicleCapUnlock
 ```
 
-Git origin：
+这是源码/构建目录，部署目标是上面的 `...\Mods\VehicleCapUnlock`。
 
-```text
-https://github.com/Nanako-Arasaka/CS2_Unlimited_PubilcVehicle.git
-```
-
-这是源码/构建目录。部署目标是用户数据中的独立目录：
-
-```text
-%USERPROFILE%\AppData\LocalLow\Colossal Order\Cities Skylines II\Mods\VehicleCapUnlock
-```
-
-原始交接工程仍保留在 E:\cs2-mod-study\VehicleCapUnlock，后续开发以新工程目录为准。
-游戏 DLL、SDK、NuGet 缓存、编译产物均不纳入 Git。
-
-## 构建
-
-目标框架 net48，C# 9。本机无需安装完整官方 Unity modding 工具链即可编译。
-便携 SDK 8.0.428 放在 .tools/dotnet，不修改系统 PATH。
-
-在工程目录运行：
-
-```powershell
-# 首次准备环境：从微软官方下载 SDK，校验 SHA512 后解压。
-.\scripts\bootstrap-sdk.ps1
-
-# 仅构建。
-.\scripts\build.ps1
-
-# 构建并运行数学和安全回归验证。
-.\scripts\build.ps1 -Test
-
-# 正常退出游戏后，明确部署 DLL。
-.\scripts\build.ps1 -Deploy
-```
-
-构建脚本在 Cities2 进程存在时拒绝 -Deploy，编译/测试结束后写入前再次检查；默认构建不部署。
-同时使用 -Test -Deploy 时，两组回归通过后才复制 DLL，部署后核验 SHA256。
-产物是 bin/Release/VehicleCapUnlock.dll。
-
-默认游戏引用路径是安装目录的 Cities2_Data/Managed。其他安装位置可指定：
-
-```powershell
-.\scripts\build.ps1 -ManagedPath 'D:\Games\Cities Skylines II\Cities2_Data\Managed'
-```
-
-net48 引用程序集由 Microsoft.NETFramework.ReferenceAssemblies 1.0.3 提供，首次还原需要网络。
-官方 CSII_TOOLPATH 导入分支保留，但本次只验证了无官方工具链的构建路线；发布流程尚未配置。
+原始交接工程仍保留在 E:\cs2-mod-study\VehicleCapUnlock，后续开发以本仓库为准。
 
 ## 设置
 
@@ -141,3 +171,70 @@ Absolute 不能为所有线路表达同一个配车倍率，因此保持初始�
 
 见 docs/VALIDATION.md。数学测试不能替代 Unity/ECS 生命周期与游戏前端测试。
 提高可用车数不保证立即出车：实际结果还受线路条件、车库、道路和模拟状态影响。
+
+---
+
+# 模组 2：DeathcareTune
+
+针对火葬场「处理速度跟不上死亡速度」的调优模组。只改 prefab 数据，不依赖 Harmony，不动任何 Burst 编译的控制流。
+
+## 它改什么
+
+`Game.Prefabs.DeathcareFacilityData`（挂在 prefab 实体上）的三个字段：
+
+| 字段 | 含义 | 默认倍率 |
+|---|---|---|
+| `m_ProcessingRate` | 每次更新把待处理尸体转成已处理的速率 | ×4 |
+| `m_HearseCapacity` | 设施同时可派出的灵车数（车队规模） | ×3 |
+| `m_StorageCapacity` | 等待处理期间的尸体存放上限 | ×3 |
+
+已有建筑立刻生效，不需要拆除重建：模拟层每 tick 用建筑的 `PrefabRef` 去
+`ComponentLookup<DeathcareFacilityData>` 取 prefab 上的值。
+
+## 为什么「灵车一次多装几具」改数据做不到
+
+反编译 `Game.dll`（v1.1.x，2026-11-11 构建）核实：
+
+1. `HearseData.m_CorpseCapacity` 的全部引用只有 4 处：自身 `.ctor` / `Serialize` / `Deserialize`，
+   以及 `DeveloperInfoUISystem.HasPassengerInfo` / `UpdatePassengerInfo`（**只用于 UI 显示**）。
+   `HearseAISystem` 与 `DeathcareFacilityAISystem` 从不读取它 —— 改它只会让界面上的数字说谎。
+2. `HearseTickJob.LoadCorpses` 一旦匹配到目标尸体就 `m_State |= 4`（AtTarget）并 `return true`；
+   `HearseTickJob.Tick` 随后立刻 `TransportToFacility`。整条链路上没有任何容量比较，
+   「一趟一具」是控制流写死的。
+3. 这些逻辑位于 `[BurstCompile]` 的 `IJobChunk.Execute` 内，Harmony 补丁作用不到 Burst 编译后的机器码。
+   要让一辆车真装多具，等价于重写灵车 AI，风险与收益不成比例。
+
+因此本模组用**车队规模倍率**做等效替代：一趟一具 × N 辆车 = 同量级的收运吞吐，
+且完全走数据层，可逆。
+
+## 设置
+
+| 设置项 | 默认 | 范围 | 说明 |
+|---|---|---|---|
+| 启用殡葬调优 | 开 | 开 / 关 | 关闭即还原 |
+| 火化速度 | 4 | 1–20 | 墓地基线为 0，保持 0 |
+| 灵车数量 | 3 | 1–10 | 收运吞吐的唯一杠杆 |
+| 尸体存放容量 | 3 | 1–10 | 基线为 0 的设施不动 |
+| 准备卸载 | — | 按钮 | 全部归 1 倍并写回原版值 |
+
+## 安全边界
+
+- 只写 prefab 实体，不写建筑实例、不写存档内的城市数据。
+- 首次触碰某 prefab 时记录基线并写日志（`[殡葬基线]`），还原时按基线写回。
+- 若数据被其他来源改过（现值 ≠ 本模组上次写入值），**不覆盖**，只报冲突并跳过。
+- 零值、负值、NaN/Infinity 一律原样保留，不做「造容量」。
+- 数量上限 100000、速率上限 100000，截断会告警。
+
+## 已知风险（未验证项）
+
+- **存档是否持久化 prefab 数据尚未验证。** 如果确实持久化，在开启调优的状态下保存，
+  移除模组后数值可能仍留在存档里。移除前请先点「准备卸载」并等到状态显示已还原，再另存副本。
+- 车队规模受建筑停车位/车库约束，`m_HearseCapacity` 抬高后实际出车数可能仍被停车位限制。
+- 尚未做游戏内验收（城市加载、死亡潮、存档往返、卸载还原）。
+
+## 验证记录
+
+- Release 构建：0 警告 0 错误。
+- `Core/DeathcareScale` 换算回归 17 项断言通过（零值/负值/NaN/Infinity 保留、上限截断、截断标记）。
+- 详细说明见 [DeathcareTune/README.md](DeathcareTune/README.md)。
+- 日志：`%USERPROFILE%\AppData\LocalLow\Colossal Order\Cities Skylines II\Logs\DeathcareTune.log`

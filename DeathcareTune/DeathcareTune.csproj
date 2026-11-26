@@ -1,0 +1,96 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFramework>net48</TargetFramework>
+		<LangVersion>9.0</LangVersion>
+		<Configurations>Debug;Release</Configurations>
+		<AssemblyName>DeathcareTune</AssemblyName>
+		<RootNamespace>DeathcareTune</RootNamespace>
+		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+		<DeployOnBuild Condition="'$(DeployOnBuild)' == ''">false</DeployOnBuild>
+
+		<!-- 游戏托管程序集目录。默认按本机 Steam 库路径，装到别处就改这里。 -->
+		<ManagedPath Condition="'$(ManagedPath)' == ''">E:\SteamLibrary\steamapps\common\Cities Skylines II\Cities2_Data\Managed</ManagedPath>
+	</PropertyGroup>
+
+	<!-- 官方工具链存在时走正常路线 -->
+	<Import Project="$(CSII_TOOLPATH)\Mod.props"
+	        Condition="'$(CSII_TOOLPATH)' != '' And Exists('$(CSII_TOOLPATH)\Mod.props')" />
+	<Import Project="$(CSII_TOOLPATH)\Mod.targets"
+	        Condition="'$(CSII_TOOLPATH)' != '' And Exists('$(CSII_TOOLPATH)\Mod.targets')" />
+
+	<!-- 没有工具链时的降级路线：直接引游戏程序集 + net48 引用程序集包 -->
+	<PropertyGroup Condition="!Exists('$(CSII_TOOLPATH)\Mod.props')">
+		<UseToolchain>false</UseToolchain>
+		<EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+	</PropertyGroup>
+
+	<ItemGroup Condition="'$(UseToolchain)' == 'false'">
+		<PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Remove="tests\**\*.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="Game">
+			<HintPath>$(ManagedPath)\Game.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Colossal.Core">
+			<HintPath>$(ManagedPath)\Colossal.Core.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Colossal.Logging">
+			<HintPath>$(ManagedPath)\Colossal.Logging.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Colossal.IO.AssetDatabase">
+			<HintPath>$(ManagedPath)\Colossal.IO.AssetDatabase.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Colossal.Localization">
+			<HintPath>$(ManagedPath)\Colossal.Localization.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="UnityEngine.CoreModule">
+			<HintPath>$(ManagedPath)\UnityEngine.CoreModule.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Unity.Burst">
+			<HintPath>$(ManagedPath)\Unity.Burst.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Unity.Collections">
+			<HintPath>$(ManagedPath)\Unity.Collections.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Unity.Entities">
+			<HintPath>$(ManagedPath)\Unity.Entities.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="Unity.Mathematics">
+			<HintPath>$(ManagedPath)\Unity.Mathematics.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Update="System"><Private>false</Private></Reference>
+		<Reference Update="System.Core"><Private>false</Private></Reference>
+		<Reference Update="System.Data"><Private>false</Private></Reference>
+	</ItemGroup>
+
+	<!-- 降级路线下手工部署到本地 Mods 目录 -->
+	<Target Name="DeployToLocalMods" AfterTargets="Build" Condition="'$(UseToolchain)' == 'false' And '$(DeployOnBuild)' == 'true'">
+		<PropertyGroup>
+			<LocalModDir Condition="'$(LocalModDir)' == ''">$(USERPROFILE)\AppData\LocalLow\Colossal Order\Cities Skylines II\Mods\DeathcareTune</LocalModDir>
+		</PropertyGroup>
+		<MakeDir Directories="$(LocalModDir)" />
+		<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(LocalModDir)" />
+		<Message Text="已部署到 $(LocalModDir)" Importance="high" />
+	</Target>
+
+</Project>
